@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 import requests
 from datetime import *
-# comment again
+# comment 02
 app = FastAPI()
  
 API_BASE_URL = "https://api.exchangerate-api.com/v4/latest/"
