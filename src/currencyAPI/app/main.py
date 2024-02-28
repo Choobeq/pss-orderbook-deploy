@@ -377,11 +377,11 @@ async def check_yesterdays_price(from_currency: str, to_currency: str) -> dict:
         raise HTTPException(status_code=400, detail="An error occurred while receiving data")
 
 @app.post("/calculate_portfolio_value")
-def calculate_portfolio_value(holdings: dict, base_currency: str = "USD"):
+async def calculate_portfolio_value(holdings: dict, base_currency: str = "USD"):
     total_value = 0.0
     for currency, amount in holdings["holdings"].items():
         try:
-            exchange_rate = get_exchange_rate(base_currency, currency)
+            exchange_rate = await get_exchange_rate(base_currency, currency)
             total_value += amount * exchange_rate
         except HTTPException as e:
  
