@@ -376,30 +376,29 @@ async def check_yesterdays_price(from_currency: str, to_currency: str) -> dict:
         print(e)
         raise HTTPException(status_code=400, detail="An error occurred while receiving data")
 
-@app.post("/track-portfolio")
-async def track_portfolio(holdings: dict):
-    if "holdings" not in holdings:
-        raise HTTPException(status_code=400, detail="Invalid request")
- 
-    total_portfolio_value = calculate_portfolio_value(holdings["holdings"])
- 
-    return {"total_portfolio_value in GBP": total_portfolio_value}
- 
-def calculate_portfolio_value(holdings: dict) -> float:
+@app.post("/calculate_portfolio_value")
+def calculate_portfolio_value(holdings: dict, base_currency: str = "USD"):
     total_value = 0.0
-    exchange_rates = {
-        'USD': 0.79,
-        'EUR': 0.85,
-        'GBP': 1,
-        'JPY': 0.0052,
-        'AUD': 0.52,
-        'CAD': 0.59  
-    }
+    for currency, amount in holdings["holdings"].items():
+        try:
+            exchange_rate = get_exchange_rate(base_currency, currency)
+            total_value += amount * exchange_rate
+        except HTTPException as e:
  
-    for currency, amount in holdings.items():
-        if currency not in exchange_rates:
-            raise HTTPException(status_code=400, detail=f"Invalid currency: {currency}")
+            print(f"Error for currency {currency}: {str(e)}")
  
-        exchange_rate = exchange_rates[currency]
-        total_value += amount * exchange_rate
-    return total_value
+    result = {"total_portfolio_value": total_value}
+ 
+    if total_value > 2000:
+        result["suggestion"] = "Consider investing in a diversified portfolio. Think about individual stocks and Exchange Traded Funds."
+ 
+    if total_value > 5000:
+        result["suggestion"] = "Explore investment options with higher returns. Think about Crypto currency and Bonds"
+ 
+    if total_value > 10000:
+        result["suggestion"] = "Consult with a financial advisor for personalized investment advice."
+ 
+    if total_value > 50000:
+        result["suggestion"] = "Diversify across different asset classes for long-term growth. Look into Real Estate."
+ 
+    return result
