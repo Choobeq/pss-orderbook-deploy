@@ -228,64 +228,86 @@ async def add_crypto_to_orderbook(crypto: str) -> dict:
     finally:
         session.close()
 
-@app.get("/check_crypto")
-async def check_crypto(crypto_param: str) -> dict:
-   
-    # Coded by: Alex Naskinov
-    # This endpoint checks if a given crypto currency is available for trade
-    # Supports querying by either crypto ID or crypto name
-   
+@app.get("/check_all_currencies")
+async def check_all_currencies(crypto_symbol: str) -> dict:
+    """
+    Coded by: Alex Naskinov
+    This endpoint checks if a given crypto or fiat currency is tradable using the symbol value. (Uses COINBASE_RATES API)
+    """
     try:
-        response = requests.get(COINBASE_API_URL)
+        response = requests.get(COINBASE_RATES)
         if response.status_code == 200:
             data = response.json()
-            crypto_codes = [currency["code"] for currency in data["data"]]
-            crypto_names = [currency["name"] for currency in data["data"]]
-            
-            if crypto_param in crypto_codes or crypto_param in crypto_names:
-                return {"message": "This crypto currency is tradable"}
+            rates = data["data"]["rates"]
+            crypto_symbol_upper = crypto_symbol.upper()  # Convert input to uppercase
+           
+            if crypto_symbol_upper in rates:
+                return {"message": "This currency is tradable"}
             else:
-                return {"error_message": "This crypto currency is not tradable"}
+                return {"error_message": "This currency is not tradable"}
         else:
-            raise HTTPException(status_code=400, detail="Failed to fetch crypto currencies")
+            raise HTTPException(status_code=400, detail="Failed to fetch currency rates")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-
 
 @app.get("/compare_currencies")
 async def compare_currencies(currency_1: str, currency_2: str) -> dict:
     try:
-        currency_1 = currency_1.upper()  # Convert to uppercase
-        currency_2 = currency_2.upper()  # Convert to uppercase
-
-        response = requests.get(f"{API_BASE_URL}/{currency_1}")
+        if currency_1.upper() == currency_2.upper():
+            return {
+                "currency_1": currency_1.upper(),
+                "currency_2": currency_2.upper(),
+                "exchange_rate": 1,
+                "amount_in_currency_2_with_one_unit_of_currency_1": 1,
+                "message": "Both input values are the same",
+                "value_message": "No difference in value"
+            }
+       
+        response = requests.get(API_BASE_URL + currency_1.upper())
+       
         if response.status_code == 200:
             data = response.json()
-            base_currency = data["base"]
             conversion_rates = data["rates"]
-
-            if currency_2 not in conversion_rates:
-                return {"error": f"{currency_2} not found in exchange rates."}
-
-            currency_1_value = conversion_rates.get(currency_1, None)
-            currency_2_value = conversion_rates[currency_2]
-
-            if currency_1_value is None:
-                return {"error": f"{currency_1} not found in exchange rates."}
-
-            if currency_2_value < 1:
-                message = f"{currency_2} is more valuable than {currency_1} compared to {base_currency}."
-            elif currency_2_value > 1:
-                message = f"{currency_1} is more valuable than {currency_2} compared to {base_currency}."
+           
+            if currency_2.upper() in conversion_rates:
+                rate_currency_2 = conversion_rates[currency_2.upper()]
+                amount_in_currency_2 = 1 / rate_currency_2
+               
+                # Determine which currency is more valuable
+                if rate_currency_2 < 1:
+                    more_valuable_currency = currency_2.upper()
+                    less_valuable_currency = currency_1.upper()
+                    value_multiple = 1 / rate_currency_2
+                    value_message = f"{currency_1.upper()} is {value_multiple:.2f}x less valuable than {currency_2.upper()}"
+                elif rate_currency_2 > 1:
+                    more_valuable_currency = currency_1.upper()
+                    less_valuable_currency = currency_2.upper()
+                    value_multiple = rate_currency_2
+                    value_message = f"{currency_1.upper()} is {value_multiple:.2f}x more valuable than {currency_2.upper()}"
+                else:
+                    return {
+                        "currency_1": currency_1.upper(),
+                        "currency_2": currency_2.upper(),
+                        "exchange_rate": rate_currency_2,
+                        "amount_in_currency_2_with_one_unit_of_currency_1": amount_in_currency_2,
+                        "message": "These currencies have the same value",
+                        "value_message": "No difference in value"
+                    }
+ 
+                return {
+                    "currency_1": currency_1.upper(),
+                    "currency_2": currency_2.upper(),
+                    "exchange_rate": rate_currency_2,
+                    "amount_in_currency_2_with_one_unit_of_currency_1": amount_in_currency_2,
+                    "message": f"{more_valuable_currency} is more valuable than {less_valuable_currency}",
+                    "value_message": value_message
+                }
             else:
-                message = f"{currency_1} and {currency_2} have the same value compared to {base_currency}."
-
-            return {"result": "success", "message": message}
+                raise HTTPException(status_code=400, detail="Currency not supported")
         else:
-            raise HTTPException(status_code=400, detail="Failed to fetch exchange rates.")
+            raise HTTPException(status_code=400, detail="Failed to fetch exchange rates")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-
 
 async def get_historical_data(currency: str) -> dict:
     # """
