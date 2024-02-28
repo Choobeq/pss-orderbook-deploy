@@ -223,7 +223,7 @@ async def add_crypto_to_orderbook(crypto: str) -> dict:
         session.close()
 
 @app.get("/check_all_currencies")
-async def check_all_currencies(crypto_symbol: str) -> dict:
+async def check_all_currencies(currency_symbol: str) -> dict:
     """
     Coded by: Alex Naskinov
     This endpoint checks if a given crypto or fiat currency is tradable using the symbol value. (Uses COINBASE_RATES API)
@@ -233,9 +233,9 @@ async def check_all_currencies(crypto_symbol: str) -> dict:
         if response.status_code == 200:
             data = response.json()
             rates = data["data"]["rates"]
-            crypto_symbol_upper = crypto_symbol.upper()  # Convert input to uppercase
-           
-            if crypto_symbol_upper in rates:
+            currency_symbol_upper = currency_symbol.upper()  # Convert input to uppercase
+       
+            if currency_symbol_upper in rates:
                 return {"message": "This currency is tradable"}
             else:
                 return {"error_message": "This currency is not tradable"}
@@ -272,12 +272,12 @@ async def compare_currencies(currency_1: str, currency_2: str) -> dict:
                     more_valuable_currency = currency_2.upper()
                     less_valuable_currency = currency_1.upper()
                     value_multiple = 1 / rate_currency_2
-                    value_message = f"{currency_1.upper()} is {value_multiple:.2f}x less valuable than {currency_2.upper()}"
+                    value_message = f"{currency_1.upper()} is {value_multiple:.2f} x less valuable than {currency_2.upper()}"
                 elif rate_currency_2 > 1:
                     more_valuable_currency = currency_1.upper()
                     less_valuable_currency = currency_2.upper()
                     value_multiple = rate_currency_2
-                    value_message = f"{currency_1.upper()} is {value_multiple:.2f}x more valuable than {currency_2.upper()}"
+                    value_message = f"{currency_1.upper()} is {value_multiple:.2f} x more valuable than {currency_2.upper()}"
                 else:
                     return {
                         "currency_1": currency_1.upper(),
@@ -297,9 +297,9 @@ async def compare_currencies(currency_1: str, currency_2: str) -> dict:
                     "value_message": value_message
                 }
             else:
-                raise HTTPException(status_code=400, detail="Currency not supported")
+                raise HTTPException(status_code=400, detail="One of the currencies is not supported")
         else:
-            raise HTTPException(status_code=400, detail="Failed to fetch exchange rates")
+            raise HTTPException(status_code=400, detail="Failed to fetch exchange rates/ currency not supported")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
