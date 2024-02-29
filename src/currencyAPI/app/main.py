@@ -111,13 +111,11 @@ async def get_usd_rate() -> dict:
 async def convert_crypto(from_crypto: str, to_currency: str, amount_crypto: float) -> dict:
     try:
         response = requests.get(f"{COINBASE_API_BASE_URL}prices/{from_crypto.upper()}-{to_currency.upper()}/buy")
-       
         # Check if the response indicates a successful request
         if response.status_code == 404:
-            raise HTTPException(status_code=404, detail=f"Currency pair not found")
+            raise HTTPException(status_code=400, detail=f"Currency pair not found")
         elif response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=f"Error fetching data from the API")
-       
         data = response.json()
         price = round(float(data["data"]["amount"]), 4)
         converted_amount = round(price * amount_crypto, 4)
@@ -129,7 +127,7 @@ async def convert_crypto(from_crypto: str, to_currency: str, amount_crypto: floa
             "amount_crypto": amount_crypto
         }
     except requests.RequestException as e:
-        raise HTTPException(status_code=400, detail=f"Error fetching crypto price: {str(e)}")
+        raise HTTPException(status_code=404, detail=f"Error fetching crypto price: {str(e)}")
  
 @app.get("/update_orderbookdb_asset_price")
 async def update_orderbookdb_asset_price(symbol: str, new_price: float) -> dict:
@@ -230,7 +228,6 @@ async def check_all_currencies(currency_symbol: str) -> dict:
             data = response.json()
             rates = data["data"]["rates"]
             currency_symbol_upper = currency_symbol.upper()  # Convert input to uppercase
-       
             if currency_symbol_upper in rates:
                 return {"message": "This currency is tradable"}
             else:
@@ -238,10 +235,13 @@ async def check_all_currencies(currency_symbol: str) -> dict:
         else:
             raise HTTPException(status_code=400, detail="Failed to fetch currency rates")
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e))
 
 @app.get("/compare_currencies")
 async def compare_currencies(currency_1: str, currency_2: str) -> dict:
+    """
+    Coded by: Alex Naskinov
+    """
     try:
         if currency_1.upper() == currency_2.upper():
             return {
@@ -252,17 +252,13 @@ async def compare_currencies(currency_1: str, currency_2: str) -> dict:
                 "message": "Both input values are the same",
                 "value_message": "No difference in value"
             }
-       
         response = requests.get(API_BASE_URL + currency_1.upper())
-       
         if response.status_code == 200:
             data = response.json()
             conversion_rates = data["rates"]
-           
             if currency_2.upper() in conversion_rates:
                 rate_currency_2 = conversion_rates[currency_2.upper()]
                 amount_in_currency_2 = 1 / rate_currency_2
-               
                 # Determine which currency is more valuable
                 if rate_currency_2 < 1:
                     more_valuable_currency = currency_2.upper()
@@ -283,7 +279,6 @@ async def compare_currencies(currency_1: str, currency_2: str) -> dict:
                         "message": "These currencies have the same value",
                         "value_message": "No difference in value"
                     }
- 
                 return {
                     "currency_1": currency_1.upper(),
                     "currency_2": currency_2.upper(),
@@ -297,7 +292,7 @@ async def compare_currencies(currency_1: str, currency_2: str) -> dict:
         else:
             raise HTTPException(status_code=400, detail="Failed to fetch exchange rates/ currency not supported")
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e))
 
 async def get_historical_data(from_currency: str, to_currency: str) -> dict:
     # """
