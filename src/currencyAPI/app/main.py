@@ -9,6 +9,8 @@ COINBASE_API_URL = "https://api.coinbase.com/v2/currencies/crypto"
 COINBASE_RATES = "https://api.coinbase.com/v2/exchange-rates/"
 COINBASE_FIAT = "https://api.coinbase.com/v2/currencies"
 FREECURRENCYAPI = "https://api.freecurrencyapi.com/v1/historical?apikey=fca_live_7dHeSfDiffz0YIQcp86XBN45JExNt6GHsDY9n5m0"
+COINBASE_API_BASE_URL = "https://api.coinbase.com/v2/"
+COINBASE_API_ENDPOINT = "currencies/crypto"
  
 
 async def get_exchange_rate(from_currency: str, to_currency: str) -> float:
@@ -106,34 +108,28 @@ async def get_usd_rate() -> dict:
         raise HTTPException(status_code=400, detail="Failed to fetch USD rates")
    
 @app.get("/convert_crypto")
-async def convert_crypto(from_crypto: str, to_currency: str, amount: float) -> dict:
-    # """
-    # Coded by: Tomasz Wisniewski & Bette Beament
-    # This endpoint allows you to convert crypto into any currency.
-    # This endpoint includes a function to display an error when an invalid crypto currency has been entered.
-    # """
+async def convert_crypto(from_crypto: str, to_currency: str, amount_crypto: float) -> dict:
     try:
-        check_result = await check_all_currencies(from_crypto)
-        if "error_message" in check_result:
-            raise HTTPException(status_code=400, detail=check_result["error_message"])
- 
-        crypto_rate = await get_usd_rate()
-        ex_rate = await exchange_rate(to_currency, "USD")
-        rate_to_USD = float(ex_rate["exchange_rate"])
-        rate_from_USD = float(crypto_rate['rates'][from_crypto])
-        rate_crypto = rate_to_USD * rate_from_USD
-        converted_amount = (1 / rate_crypto) * amount
+        response = requests.get(f"{COINBASE_API_BASE_URL}prices/{from_crypto.upper()}-{to_currency.upper()}/buy")
+       
+        # Check if the response indicates a successful request
+        if response.status_code == 404:
+            raise HTTPException(status_code=404, detail=f"Currency pair not found")
+        elif response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=f"Error fetching data from the API")
+       
+        data = response.json()
+        price = round(float(data["data"]["amount"]), 4)
+        converted_amount = round(price * amount_crypto, 4)
         return {
-            "crypto_currency": from_crypto.upper(),
-            "fiat_currency": to_currency.upper(),
-            "crypto_rate": rate_crypto,
-            "amount": amount,
+            "price": price,
             "converted_amount": converted_amount,
+            "from_crypto": from_crypto.upper(),
+            "to_currency": to_currency.upper(),
+            "amount_crypto": amount_crypto
         }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except requests.RequestException as e:
+        raise HTTPException(status_code=400, detail=f"Error fetching crypto price: {str(e)}")
  
 @app.get("/update_orderbookdb_asset_price")
 async def update_orderbookdb_asset_price(symbol: str, new_price: float) -> dict:
