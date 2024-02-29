@@ -243,15 +243,6 @@ async def compare_currencies(currency_1: str, currency_2: str) -> dict:
     Coded by: Alex Naskinov
     """
     try:
-        if currency_1.upper() == currency_2.upper():
-            return {
-                "currency_1": currency_1.upper(),
-                "currency_2": currency_2.upper(),
-                "exchange_rate": 1,
-                "amount_in_currency_2_with_one_unit_of_currency_1": 1,
-                "message": "Both input values are the same",
-                "value_message": "No difference in value"
-            }
         response = requests.get(API_BASE_URL + currency_1.upper())
         if response.status_code == 200:
             data = response.json()
@@ -264,21 +255,22 @@ async def compare_currencies(currency_1: str, currency_2: str) -> dict:
                     more_valuable_currency = currency_2.upper()
                     less_valuable_currency = currency_1.upper()
                     value_multiple = 1 / rate_currency_2
-                    value_message = f"{currency_1.upper()} is {value_multiple:.2f} x less valuable than {currency_2.upper()}"
+                    value_message = f"{currency_1.upper()} is {value_multiple:.2f}x less valuable than {currency_2.upper()}"
                 elif rate_currency_2 > 1:
                     more_valuable_currency = currency_1.upper()
                     less_valuable_currency = currency_2.upper()
                     value_multiple = rate_currency_2
-                    value_message = f"{currency_1.upper()} is {value_multiple:.2f} x more valuable than {currency_2.upper()}"
+                    value_message = f"{currency_1.upper()} is {value_multiple:.2f}x more valuable than {currency_2.upper()}"
                 else:
                     return {
                         "currency_1": currency_1.upper(),
                         "currency_2": currency_2.upper(),
                         "exchange_rate": rate_currency_2,
                         "amount_in_currency_2_with_one_unit_of_currency_1": amount_in_currency_2,
-                        "message": "These currencies have the same value",
+                        "message": "Both currency inputs are the same",
                         "value_message": "No difference in value"
                     }
+ 
                 return {
                     "currency_1": currency_1.upper(),
                     "currency_2": currency_2.upper(),
@@ -288,11 +280,12 @@ async def compare_currencies(currency_1: str, currency_2: str) -> dict:
                     "value_message": value_message
                 }
             else:
-                raise HTTPException(status_code=400, detail="One of the currencies is not supported")
+                raise HTTPException(status_code=400, detail="Currency not supported")
         else:
-            raise HTTPException(status_code=400, detail="Failed to fetch exchange rates/ currency not supported")
+            raise HTTPException(status_code=400, detail="Currency not supported")
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
+
 
 async def get_historical_data(from_currency: str, to_currency: str) -> dict:
     # """
