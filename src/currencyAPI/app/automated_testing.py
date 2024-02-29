@@ -1,8 +1,9 @@
 # # Testing c374team23 endpoints
 
 import requests
-import tracemalloc
 import asyncio
+import datetime
+import time
 
 test_successful = 0
 test_failed = 0
@@ -233,19 +234,25 @@ async def run_test_compare_currencies(url: str, currency_1: str, currency_2: str
 
 url = "https://c374team23dev-currencyapi.computerlab.online/compare_currencies"
 # TEST 01
-x = run_test_compare_currencies(url, "BTC", "GBP")
+x = run_test_compare_currencies(url, "USD", "JPY")
 asyncio.run(x)
 # TEST 02
-x = run_test_compare_currencies(url, "btc", "GBP")
+x = run_test_compare_currencies(url, "JPY", "USD")
 asyncio.run(x)
 # TEST 03
-x = run_test_compare_currencies(url, "BTC", "gbp")
+x = run_test_compare_currencies(url, "usd", "JPY")
 asyncio.run(x)
 # TEST 04
-x = run_test_compare_currencies(url, "bitcoin", "GBP")
+x = run_test_compare_currencies(url, "USD", "JPY")
 asyncio.run(x)
 # TEST 05
 x = run_test_compare_currencies(url, "BTCK", "GBP")
+asyncio.run(x)
+# TEST 06
+x = run_test_compare_currencies(url, "USD", "USD")
+asyncio.run(x)
+# TEST 07
+x = run_test_compare_currencies(url, "BMD", "USD")
 asyncio.run(x)
 
 # Testing /check_yesterdays_price endpoint
